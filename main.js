@@ -26,17 +26,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 
-    // Обработчик сообщений от родительского окна
-    window.addEventListener('message', (event) => {
-        if (event.data.type === 'updateProducts') {
-            availableProducts = event.data.data; // Сохраняем полученные продукты
-            populateAllProductSelectors(); // Заполняем все текущие селекторы
-        }
-    });
-
-    // Отправляем сообщение о готовности iframe
-    window.parent.postMessage({type: 'iframeReady'}, '*');
-
     // Функция для создания блока рекомендаций
     function createProductsBlock(index) {
         const block = document.createElement('div');
@@ -197,28 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (downloadBtn) {
         downloadBtn.addEventListener("click", window.generateCalendarPDF);
     }
-
-
-    function sendHeightToParent() {
-        const h = Math.max(
-            document.body.scrollHeight,
-            document.documentElement.scrollHeight
-        );
-        window.parent.postMessage({type: "COSMIKI_RESIZE", height: h}, "*");
-    }
-
-    function installAutoResize() {
-        const ro = new ResizeObserver(() => {
-            sendHeightToParent();
-        });
-        ro.observe(document.body);
-        ro.observe(document.documentElement);
-    }
-
-    window.addEventListener("load", () => {
-        sendHeightToParent();
-        installAutoResize();
-    });
 
 });
 
