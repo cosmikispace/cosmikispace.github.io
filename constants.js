@@ -13,12 +13,12 @@ const logoUrl = "https://static.wixstatic.com/media/78e720_9600005edfd645568d6ce
 
 // Файлы шрифтов из репозитория GitHub
 const fontFiles = {
-    regular: "https://cosmikispace.github.io/Montserrat-Regular.ttf",
-    bold: "https://cosmikispace.github.io/Montserrat-Bold.ttf",
-    italic: "https://cosmikispace.github.io/Montserrat-Italic.ttf",
-    boldItalic: "https://cosmikispace.github.io/Montserrat-BoldItalic.ttf",
-    light: "https://cosmikispace.github.io/Montserrat-Light.ttf",
-    lightItalic: "https://cosmikispace.github.io/Montserrat-LightItalic.ttf"
+    regular: "https://cosmikispace.github.io/fonts/Montserrat-Regular.ttf",
+    bold: "https://cosmikispace.github.io/fonts/Montserrat-Bold.ttf",
+    italic: "https://cosmikispace.github.io/fonts/Montserrat-Italic.ttf",
+    boldItalic: "https://cosmikispace.github.io/fonts/Montserrat-BoldItalic.ttf",
+    light: "https://cosmikispace.github.io/fonts/Montserrat-Light.ttf",
+    lightItalic: "https://cosmikispace.github.io/fonts/Montserrat-LightItalic.ttf"
 };
 
 // ===== CALENDAR CONFIG =====
