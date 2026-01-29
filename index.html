@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CosMiKi – Заключення косметолога</title>
+
+    <!-- 1) Global styles -->
+    <link rel="stylesheet" href="./styles.css">
+
+    <!-- 2) Global constants and helpers (loaded before any feature modules) -->
+    <script src="./constants.js"></script>
+    <script src="./utils.js"></script>
+
+    <!-- 3) Feature modules that rely on constants/utils and expose globals via window.* -->
+    <script src="./conclusion.js"></script>
+    <script src="./calendar.js"></script>
+
+    <!-- 4) Main entry script (should be loaded last) -->
+    <script src="./main.js"></script>
+</head>
+<body>
+
+<div class="form-container">
+    <form id="consultation-form" class="styled-form">
+
+        <!-- Основна сторінка -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Заключення косметолога</legend>
+            <label class="form-label">
+                Ім'я клієнта:
+                <input type="text" name="client_name" class="form-input" required maxlength="80" value="Аліна">
+            </label>
+            <label class="form-label">
+                Скарги клієнта:
+                <textarea name="client_complaints" class="form-textarea" rows="4" required maxlength="150">Запальні елементи постакне, чорні цятки, жирність
+                </textarea>
+            </label>
+            <label class="form-label">
+                Стан шкіри:
+                <textarea name="skin_status" class="form-textarea" rows="4" placeholder="Опишіть стан шкіри" required
+                          maxlength="150">Папуло-пустульозна форма акне легкого ступеню
+                </textarea>
+            </label>
+            <label class="form-label">
+                Тактика підходу:
+                <textarea name="tactics" class="form-textarea" rows="4" placeholder="Опишіть тактику підходу" required
+                          maxlength="150">Лікувати шкіру
+                </textarea>
+            </label>
+        </fieldset>
+
+        <!-- Теоретична частина -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Теоретична частина</legend>
+            <label class="form-label">
+                Що відбувається з твоєю шкірою:
+                <textarea name="skin_condition" class="form-textarea" rows="4" required maxlength="150">Акне - хронічне захворювання шкіри, яке виникає внаслідок запалення сальної залози через певні фактори.
+                </textarea>
+            </label>
+            <label class="form-label">
+                Чому виник цей стан шкіри:
+                <textarea name="skin_condition_cause" class="form-textarea" rows="4" required maxlength="150">Фактори та тригери, які впливають на стан шкіри:
+- генетична схильність;
+- хронічний стрес.
+                </textarea>
+            </label>
+        </fieldset>
+
+        <!-- Підхід до шкіри -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Підхід до шкіри</legend>
+            <label class="form-label">
+                Опис того, як будемо вирішувати ситуацію:
+                <textarea name="solution_description" class="form-textarea" rows="4" required>Першим ділом потрібно прибрати запалення з середини шкіри.
+                </textarea>
+            </label>
+            <label class="form-label">
+                Орієнтовна тривалість лікування:
+                <textarea name="treatment_duration" class="form-textarea" rows="4" required>Так як запалення йде з глибоких шарів шкіри, лікування акне триває від 6-ти місяців до року.
+                </textarea>
+            </label>
+        </fieldset>
+
+        <!-- Рекомендації по догляду -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Рекомендації по догляду</legend>
+            <div id="products-scroll-container">
+                <div id="products-blocks" class="products-container">
+                    <!-- Динамические блоки будут добавляться сюда -->
+                </div>
+            </div>
+            <button type="button" id="add-products-block" class="form-button">Додати блок з товарами</button>
+        </fieldset>
+
+        <!--  Рекомендації по процедурах -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Рекомендації по процедурах</legend>
+            <label class="form-label">
+                Процедури, які допоможуть швидше отримати результат:
+                <textarea name="procedure_recommendations" class="form-textarea" rows="4" required>- Процедура 1
+
+- Процедура 2
+
+- Процедура 3
+                </textarea>
+            </label>
+        </fieldset>
+
+        <!-- Действия -->
+        <div class="form-actions">
+            <label for="filename-input" class="form-label">Ім'я файлу:</label>
+            <input id="filename-input" type="text" name="filename" class="form-input" value=""
+                   placeholder="Введіть ім'я файла перед збереженням"/>
+            <!--            <button type="button" id="preview-pdf" class="form-button" onclick="previewPDF()">Попередній перегляд</button>-->
+            <button type="button" id="download-pdf" class="form-button" onclick="downloadPDF()">Завантажити</button>
+        </div>
+
+        <!-- Календар догляду (preview) -->
+        <fieldset class="form-fieldset" style="margin-top: 50px;">
+            <legend class="form-legend">Календар догляду</legend>
+
+            <div class="calendar-top-row">
+                <div class="date-field" id="calendar-date-field">
+                    <label class="date-label" for="calendar-start-date">Дата консультації (старт):</label>
+                    <div class="date-pill">
+                        <input type="date" id="calendar-start-date" class="date-pill-input">
+                        <button type="button" class="date-pill-icon" id="calendar-start-date-btn"
+                                aria-label="Вибрати дату">📅
+                        </button>
+                    </div>
+                </div>
+
+                <button type="button" class="form-button" id="calendar-add-consultation">
+                    Додати зустріч (сьогодні)
+                </button>
+            </div>
+
+            <div class="calendar-actions-row">
+                <button type="button" class="form-button form-button-primary" id="calendar-download-pdf">
+                    Завантажити календар (PDF)
+                </button>
+            </div>
+
+            <div id="calendar-preview-container"></div>
+
+            <!-- Calendar event editor -->
+            <div class="calendar-editor">
+                <h3 class="calendar-subtitle">Події</h3>
+
+                <div class="calendar-event-form">
+                    <label class="form-label">
+                        Тип події:
+                        <select id="cal-ev-type" class="form-input"></select>
+                    </label>
+
+                    <label class="form-label">
+                        Режим:
+                        <select id="cal-ev-kind" class="form-input">
+                            <option value="single">Разово (одна дата)</option>
+                            <option value="range">Період (від-до)</option>
+                            <option value="repeat">Повтор (кожні N днів)</option>
+                        </select>
+                    </label>
+
+                    <div id="cal-ev-kind-single" class="calendar-kind-panel">
+                        <label class="form-label">
+                            Дата:
+                            <div class="date-pill">
+                                <input type="date" id="cal-ev-date" class="date-pill-input"/>
+                                <button type="button" class="date-pill-icon" id="cal-ev-date-btn"
+                                        aria-label="Вибрати дату">📅
+                                </button>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div id="cal-ev-kind-range" class="calendar-kind-panel" style="display:none;">
+                        <label class="form-label">
+                            Від:
+                            <div class="date-pill">
+                                <input type="date" id="cal-ev-start" class="date-pill-input"/>
+                                <button type="button" class="date-pill-icon" id="cal-ev-start-btn"
+                                        aria-label="Вибрати дату">📅
+                                </button>
+                            </div>
+                        </label>
+                        <label class="form-label">
+                            До:
+                            <div class="date-pill">
+                                <input type="date" id="cal-ev-end" class="date-pill-input"/>
+                                <button type="button" class="date-pill-icon" id="cal-ev-end-btn"
+                                        aria-label="Вибрати дату">📅
+                                </button>
+                            </div>
+                        </label>
+
+                    </div>
+
+                    <div id="cal-ev-kind-repeat" class="calendar-kind-panel" style="display:none;">
+                        <label class="form-label">
+                            Початок:
+                            <div class="date-pill">
+                                <input type="date" id="cal-ev-repeat-start" class="date-pill-input"/>
+                                <button type="button" class="date-pill-icon" id="cal-ev-repeat-start-btn"
+                                        aria-label="Обрати дату">📅
+                                </button>
+                            </div>
+                        </label>
+                        <label class="form-label">
+                            Кінець:
+                            <div class="date-pill">
+                                <input type="date" id="cal-ev-repeat-end" class="date-pill-input"/>
+                                <button type="button" class="date-pill-icon" id="cal-ev-repeat-end-btn"
+                                        aria-label="Обрати дату">📅
+                                </button>
+                            </div>
+                        </label>
+
+                        <label class="form-label">
+                            Інтервал/частота (днів):
+                            <div class="pill-input">
+                                <input type="number"
+                                       id="cal-ev-interval"
+                                       class="pill-input-field"
+                                       min="1"
+                                       step="1"
+                                       inputmode="numeric"
+                                       value="2"/>
+                                <span class="pill-input-addon">днів</span>
+                            </div>
+                        </label>
+
+                    </div>
+
+                    <label class="form-label">
+                        Колір:
+                        <select id="cal-ev-color" class="form-input"></select>
+                    </label>
+
+                    <label class="form-label" style="grid-column: 1 / -1;">
+                        Події (можна змінити):
+                        <textarea id="cal-ev-legend" class="form-textarea" rows="3"></textarea>
+                    </label>
+
+                    <div class="calendar-event-actions">
+                        <button type="button" class="form-button" id="cal-ev-add">Додати подію</button>
+                        <button type="button" class="form-button" id="cal-ev-clear">Очистити поля</button>
+                    </div>
+                </div>
+
+                <div class="calendar-events-list">
+                    <h4 class="calendar-subtitle" style="margin-top:18px;">Список подій</h4>
+                    <div id="calendar-events-container"></div>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+</div>
+</body>
+</html>
