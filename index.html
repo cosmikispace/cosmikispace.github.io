@@ -26,7 +26,7 @@
 
         <!-- Основна сторінка -->
         <fieldset class="form-fieldset">
-            <legend class="form-legend">Заключення косметолога</legend>
+            <legend class="form-legend">Заключення косметолога (Сторінка 1)</legend>
             <label class="form-label">
                 Ім'я клієнта:
                 <input type="text" name="client_name" class="form-input" required maxlength="80" value="Аліна">
@@ -50,35 +50,80 @@
             </label>
         </fieldset>
 
-        <!-- Теоретична частина -->
+        <!-- Теоретична частина (Сторінка 2) -->
         <fieldset class="form-fieldset">
-            <legend class="form-legend">Теоретична частина</legend>
-            <label class="form-label">
-                Що відбувається з твоєю шкірою:
-                <textarea name="skin_condition" class="form-textarea" rows="4" required maxlength="150">Акне - хронічне захворювання шкіри, яке виникає внаслідок запалення сальної залози через певні фактори.
-                </textarea>
+            <legend class="form-legend">Теоретична частина (Сторінка 2)</legend>
+
+            <label class="form-label checkbox-label theory-toggle-label">
+                <input type="checkbox" id="includeTheoryPage" checked>
+                Додати теоретичну сторінку
             </label>
+
             <label class="form-label">
-                Чому виник цей стан шкіри:
-                <textarea name="skin_condition_cause" class="form-textarea" rows="4" required maxlength="150">Фактори та тригери, які впливають на стан шкіри:
-- генетична схильність;
-- хронічний стрес.
-                </textarea>
+                Діагноз (шаблон):
+                <select id="theoryPreset" class="form-select">
+                    <option value="">— Обрати діагноз (шаблон) —</option>
+                    <option value="acne">Акне</option>
+                    <option value="acneiform">Акнеподібний дерматоз</option>
+                    <option value="rosacea">Розацеа</option>
+                    <option value="fungal">Грибкове акне</option>
+                    <option value="barrier">Порушення бар'єру</option>
+                    <option value="custom">Свій текст / без шаблону</option>
+                </select>
             </label>
+
+            <div id="theoryPageSection">
+                <label class="form-label">
+                    Що відбувається з твоєю шкірою:
+                    <textarea id="theoryWhat" name="theory_what" class="form-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-label">
+                    Тригери, які впливають на стан шкіри:
+                    <textarea id="theoryTriggers" name="theory_triggers" class="form-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-label">
+                    Тактика підходу до шкіри:
+                    <textarea id="theoryTactics" name="theory_tactics" class="form-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-label">
+                    Тривалість лікування:
+                    <textarea id="theoryDuration" name="theory_duration" class="form-textarea" rows="4"></textarea>
+                </label>
+            </div>
         </fieldset>
 
-        <!-- Підхід до шкіри -->
+        <!-- План роботи (Сторінка 3) -->
         <fieldset class="form-fieldset">
-            <legend class="form-legend">Підхід до шкіри</legend>
+            <legend class="form-legend">План роботи (Сторінка 3)</legend>
             <label class="form-label">
-                Опис того, як будемо вирішувати ситуацію:
-                <textarea name="solution_description" class="form-textarea" rows="4" required>Першим ділом потрібно прибрати запалення з середини шкіри.
-                </textarea>
+                Вступний текст сторінки (без підзаголовка):
+                <textarea id="planIntroText" name="plan_intro" class="form-textarea" rows="3">Чиста та здорова шкіра — це результат системної роботи: поєднання правильного домашнього догляду та чіткого плану лікування з регулярним контролем спеціаліста.</textarea>
             </label>
             <label class="form-label">
-                Орієнтовна тривалість лікування:
-                <textarea name="treatment_duration" class="form-textarea" rows="4" required>Так як запалення йде з глибоких шарів шкіри, лікування акне триває від 6-ти місяців до року.
-                </textarea>
+                Домашній догляд:
+                <textarea id="planHomeCareIntroText" name="plan_home_care_intro" class="form-textarea" rows="4">Правильно підібраний догляд є обов'язковою частиною шляху та підтримки результату.
+Важливо: перед придбанням будь-яких засобів рекомендується попередньо узгодити вибір з косметологом. Це допоможе підібрати оптимальні продукти, які максимально відповідатимуть потребам шкіри та підтримають ефективність призначеного догляду.</textarea>
+            </label>
+            <label class="form-label">
+                Яким буде твій догляд?
+                <textarea id="planHomeCareText" name="plan_home_care" class="form-textarea" rows="6">- очищення — м'який очисник без порушення захисних функцій;
+- відновлення — крем живильний;
+- актив — для роботи з висипами;
+- захист від сонця;
+- демакіяж — перший етап очищення в вечірній рутині</textarea>
+            </label>
+            <label class="form-label">
+                Процедури, які посилять результат:
+                <textarea id="planProceduresText" name="plan_procedures" class="form-textarea" rows="4">- пілінги — під час загострення висипів;
+- мікронідлінг — для роботи з постакне</textarea>
+            </label>
+            <label class="form-label">
+                План терапії та повторна консультація:
+                <textarea id="planTherapyText" name="plan_therapy" class="form-textarea" style="height: auto; min-height: 200px;">- початковий етап — стабілізація стану шкіри та адаптація до домашнього догляду.
+- наступний етап — підключення професійних процедур для глибшої роботи зі шкірою (за потреби).
+- підтримуючий етап — закріплення результатів.
+
+Повторна консультація рекомендована через 1 місяць після старту догляду або раніше — за потреби.</textarea>
             </label>
         </fieldset>
 
@@ -87,13 +132,71 @@
             <legend class="form-legend">Рекомендації по догляду</legend>
             <div id="products-scroll-container">
                 <div id="products-blocks" class="products-container">
-                    <!-- Динамические блоки будут добавляться сюда -->
+                    <!-- Тут будуть додаватися блоки -->
                 </div>
             </div>
             <button type="button" id="add-products-block" class="form-button">Додати блок з товарами</button>
         </fieldset>
 
-        <!--  Рекомендації по процедурах -->
+        <!-- Актив -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Актив</legend>
+            <label class="form-label checkbox-label">
+                <input type="checkbox" id="includeActivePage">
+                Додати сторінку «Актив»
+            </label>
+            <label class="form-label">
+                Шаблон:
+                <select id="activePreset" class="form-select">
+                    <option value="">— Обрати шаблон —</option>
+                    <option value="acids">Кислоти</option>
+                    <option value="retinoids">Ретиноїди</option>
+                    <option value="retinol">Косметичний ретинол</option>
+                    <option value="custom">Свій текст / без шаблону</option>
+                </select>
+            </label>
+            <div id="activePageSection">
+                <label class="form-label">
+                    Декілька деталей про запропонований актив:
+                    <textarea id="activeBlock1" name="active_block1" class="form-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-label">
+                    Правила використання:
+                    <textarea id="activeBlock2" name="active_block2" class="form-textarea" rows="4"></textarea>
+                </label>
+                <label class="form-label">
+                    Можливі реакції:
+                    <textarea id="activeBlock3" name="active_block3" class="form-textarea" rows="4"></textarea>
+                </label>
+            </div>
+        </fieldset>
+
+        <!-- Рекомендації по тригерам (опційно) -->
+        <fieldset class="form-fieldset">
+            <legend class="form-legend">Рекомендації по тригерам (опційно)</legend>
+            <label class="form-label checkbox-label">
+                <input type="checkbox" id="includeTriggerStress">
+                Стрес
+            </label>
+            <label class="form-label checkbox-label">
+                <input type="checkbox" id="includeTriggerPCOS">
+                СПКЯ
+            </label>
+            <label class="form-label checkbox-label">
+                <input type="checkbox" id="includeTriggerMenstruation">
+                Менструація
+            </label>
+            <label class="form-label checkbox-label">
+                <input type="checkbox" id="includeTriggerFood">
+                Вплив їжі
+            </label>
+            <label class="form-label checkbox-label">
+                <input type="checkbox" id="includeTriggerGenetics">
+                Генетика
+            </label>
+        </fieldset>
+
+        <!-- Тимчасово вимкнено (не видаляти): Рекомендації по процедурах
         <fieldset class="form-fieldset">
             <legend class="form-legend">Рекомендації по процедурах</legend>
             <label class="form-label">
@@ -106,8 +209,9 @@
                 </textarea>
             </label>
         </fieldset>
+        -->
 
-        <!-- Действия -->
+        <!-- Дії -->
         <div class="form-actions">
             <label for="filename-input" class="form-label">Ім'я файлу:</label>
             <input id="filename-input" type="text" name="filename" class="form-input" value=""

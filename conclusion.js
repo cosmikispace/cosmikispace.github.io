@@ -62,6 +62,18 @@ async function loadFontsToDoc(doc) {
 //     doc.save("cosmetologist_conclusion.pdf");
 // }
 
+// Завантаження фонового декоративного зображення (напівпрозоре) для сторінок PDF
+async function loadDecorationBase64(url) {
+    const imageBase64 = await fetch(url)
+        .then(response => response.blob())
+        .then(blob => new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        }));
+    return await compressImage(imageBase64);
+}
+
 // Получение данных из формы
 function getFormData() {
     const products = [];
@@ -71,24 +83,28 @@ function getFormData() {
         const product2Option = block.querySelector(`[name="products[${index}][product_2]"] option:checked`);
 
         products.push({
-            timeOfDay: block.querySelector(`[name="products[${index}][time_of_day]"]`).value || "Не указано",
-            careType: block.querySelector(`[name="products[${index}][care_type]"]`).value || "Не указано",
+            timeOfDay: block.querySelector(`[name="products[${index}][time_of_day]"]`).value || "Не вказано",
+            careType: block.querySelector(`[name="products[${index}][care_type]"]`).value || "Не вказано",
             areProductsOptional: block.querySelector(`[name="products[${index}][areProductsOptional]"]`).checked,
             product1: {
-                name: product1Option ? product1Option.textContent.split(" - ")[0] : "Не указано", // Извлекаем текст до цены
-                description: block.querySelector(`[name="products[${index}][product_1][description]"]`).value || "Описание отсутствует",
+                name: product1Option ? product1Option.textContent.split(" - ")[0] : "Не вказано",
+                description: block.querySelector(`[name="products[${index}][product_1][description]"]`).value || "Опис відсутній",
                 image: product1Option ? product1Option.dataset.imageUrl || "" : "",
-                price: product1Option ? product1Option.dataset.price || "Цена не указана" : "Цена не указана",
+                price: product1Option ? product1Option.dataset.price || "Ціна не вказана" : "Ціна не вказана",
             },
             product2: {
-                name: product2Option ? product2Option.textContent.split(" - ")[0] : "Не указано", // Извлекаем текст до цены
-                description: block.querySelector(`[name="products[${index}][product_2][description]"]`).value || "Описание отсутствует",
+                name: product2Option ? product2Option.textContent.split(" - ")[0] : "Не вказано",
+                description: block.querySelector(`[name="products[${index}][product_2][description]"]`).value || "Опис відсутній",
                 image: product2Option ? product2Option.dataset.imageUrl || "" : "",
-                price: product2Option ? product2Option.dataset.price || "Цена не указана" : "Цена не указана",
+                price: product2Option ? product2Option.dataset.price || "Ціна не вказана" : "Ціна не вказана",
             },
-            note: block.querySelector(`[name="products[${index}][note]"]`).value || "Примітка отсутствует",
+            note: block.querySelector(`[name="products[${index}][note]"]`).value || "-",
         });
     });
+
+    // Theory page (Page 2)
+    const includeTheoryCheckbox = document.getElementById("includeTheoryPage");
+    const includeTheoryPage = includeTheoryCheckbox ? includeTheoryCheckbox.checked : false;
 
     return {
         salonName: "CosMiKi Space",
@@ -96,17 +112,34 @@ function getFormData() {
         clientName: document.querySelector('[name="client_name"]').value || "Ім'я не вказано",
         complaints: document.querySelector('[name="client_complaints"]').value || "Скарги відсутні",
         skinStatus: document.querySelector('[name="skin_status"]').value || "Стан шкіри не вказано",
-        skinCondition: document.querySelector('[name="skin_condition"]').value || "Дані відсутні",
-        skinConditionCause: document.querySelector('[name="skin_condition_cause"]').value || "Дані відсутні",
         tacticsTitle: "Тактика до підходу:",
         tactics: document.querySelector('[name="tactics"]').value || "Тактика не вказана",
-        treatmentPlanTitle: "З чого починається шлях до чистої шкіри",
-        treatmentPlan: document.querySelector('[name="solution_description"]').value || "Дані відсутні",
-        treatmentDurationTitle: "Орієнтовна тривалість лікування",
-        treatmentDuration: document.querySelector('[name="treatment_duration"]').value || "Дані відсутні",
         footerText: "@cosmetolog.mikhno",
         products: products,
-        procedureRecommendations: document.querySelector('[name="procedure_recommendations"]').value || ""
+        procedureRecommendations: document.querySelector('[name="procedure_recommendations"]')?.value || "",
+        // Theory page (Page 2)
+        includeTheoryPage: includeTheoryPage,
+        theoryWhat: document.getElementById("theoryWhat")?.value || "",
+        theoryTriggers: document.getElementById("theoryTriggers")?.value || "",
+        theoryTactics: document.getElementById("theoryTactics")?.value || "",
+        theoryDuration: document.getElementById("theoryDuration")?.value || "",
+        // Plan page (Page 3)
+        planIntroText: document.getElementById("planIntroText")?.value || "",
+        planHomeCareIntroText: document.getElementById("planHomeCareIntroText")?.value || "",
+        planHomeCareText: document.getElementById("planHomeCareText")?.value || "",
+        planProceduresText: document.getElementById("planProceduresText")?.value || "",
+        planTherapyText: document.getElementById("planTherapyText")?.value || "",
+        // Active page (optional)
+        includeActivePage: document.getElementById("includeActivePage")?.checked ?? false,
+        activeBlock1: document.getElementById("activeBlock1")?.value || "",
+        activeBlock2: document.getElementById("activeBlock2")?.value || "",
+        activeBlock3: document.getElementById("activeBlock3")?.value || "",
+        // Trigger pages (optional)
+        includeTriggerStress: document.getElementById("includeTriggerStress")?.checked ?? false,
+        includeTriggerPCOS: document.getElementById("includeTriggerPCOS")?.checked ?? false,
+        includeTriggerMenstruation: document.getElementById("includeTriggerMenstruation")?.checked ?? false,
+        includeTriggerFood: document.getElementById("includeTriggerFood")?.checked ?? false,
+        includeTriggerGenetics: document.getElementById("includeTriggerGenetics")?.checked ?? false
     };
 }
 
@@ -152,7 +185,7 @@ async function generatePage1(doc, formData) {
 
     const compressedBase64 = await compressImage(logoImage);
 
-    doc.addImage(compressedBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
+    doc.addImage(compressedBase64, "PNG", logoX, logoY, logoWidth, logoHeight);
 
     // Заголовок "Заключення косметолога"
     let currentX = doc.internal.pageSize.getWidth() / 2
@@ -188,10 +221,10 @@ async function generatePage1(doc, formData) {
 
     currentY += doc.getTextDimensions(complaints, {maxWidth: doc.internal.pageSize.getWidth() - 40}).h + 10;
 
-    // Стан шкіри
+    // Стан шкіри (діагноз)
     doc.setFont("Montserrat-Bold");
     doc.setFontSize(15);
-    doc.text("Стан шкіри:", currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
+    doc.text("Стан шкіри (діагноз):", currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
     doc.setFont("Montserrat-Regular");
     doc.setFontSize(14);
     currentY += 7;
@@ -218,13 +251,14 @@ async function generatePage1(doc, formData) {
     doc.text(`${footerText}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
 }
 
-// Генерация второй страницы
+// Генерация второй страницы (Теоретична частина)
 async function generatePage2(doc, formData) {
     const {
         salonName,
-        skinStatus,
-        skinCondition,
-        skinConditionCause,
+        theoryWhat,
+        theoryTriggers,
+        theoryTactics,
+        theoryDuration,
         footerText
     } = formData;
 
@@ -232,112 +266,13 @@ async function generatePage2(doc, formData) {
 
     // Устанавливаем цвет фона страницы
     doc.setFillColor(backgroundColor);
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F"); // Заливаем фон
-
-    // Устанавливаем цвет текста
-    doc.setTextColor(textColor);
-
-
-    // Координаты и размеры изображения
-    const imageUrl = "https://static.wixstatic.com/media/78e720_8d2b3ddffa5b432497cee0b152aab3f5~mv2.png"; // 30% opacity
-    const imageWidth = 150; // Ширина изображения
-    const imageHeight = 150; // Высота изображения
-    const imageX = (doc.internal.pageSize.getWidth() - imageWidth) / 2; // Центрируем по горизонтали
-    const imageY = (doc.internal.pageSize.getHeight() - imageHeight) - 10; // Центрируем по вертикали
-
-    // Загрузка изображения
-    const imageBase64 = await fetch(imageUrl)
-        .then(response => response.blob())
-        .then(blob => new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        }));
-
-    const compressedBase64 = await compressImage(imageBase64);
-
-    // Добавляем изображение
-    doc.addImage(compressedBase64, "JPEG", imageX, imageY, imageWidth, imageHeight);
-
-
-    // Хеддер
-    doc.setFont("Montserrat-Regular");
-    doc.setFontSize(15);
-    doc.text(salonName, doc.internal.pageSize.getWidth() / 2, 20, {align: "center"});
-
-    let currentX = 20
-    let currentY = 35
-
-    // Стан Шкіри
-    doc.setFont("Montserrat-Bold"); // Жирный
-    doc.setFontSize(18);
-
-    // Рассчитываем высоту блока текста
-    const skinStatusHeight = doc.getTextDimensions("Стан шкіри:" + " " + skinStatus, {maxWidth: doc.internal.pageSize.getWidth() - 40}).h;
-
-    // Рисуем текст этого блока
-    doc.text("Стан шкіри:" + " " + skinStatus, currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
-
-    currentY += skinStatusHeight + 10;
-
-    // Що відбувається з твоєю шкірою
-    doc.setFont("Montserrat-Bold");
-    doc.setFontSize(14);
-    doc.text("Що відбувається з твоєю шкірою", currentX, currentY);
-    doc.setFont("Montserrat-Regular");
-    doc.setFontSize(14);
-    currentY += 10
-
-    // Рассчитываем высоту блока текста
-    const skinConditionHeight = doc.getTextDimensions(skinCondition, {maxWidth: doc.internal.pageSize.getWidth() - 40}).h;
-
-    // Рисуем текст этого блока
-    doc.text(skinCondition, currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
-
-    currentY += skinConditionHeight + 10;
-
-    // Чому виник цей стан шкіри
-    doc.setFont("Montserrat-Bold");
-    doc.setFontSize(14);
-    doc.text("Чому виник цей стан шкіри", currentX, currentY);
-    doc.setFont("Montserrat-Regular");
-    doc.setFontSize(14);
-    currentY += 10
-    doc.text(skinConditionCause, currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
-
-    // Футер
-    doc.setDrawColor(lineColor); // Устанавливаем цвет #9F7662 коричневый
-    // doc.setDrawColor(lineColor.r, lineColor.g, lineColor.b); // Устанавливаем цвет #4E555C серый
-    doc.line(20, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 20);
-    doc.setFont("Montserrat-Italic");
-    doc.setFontSize(12);
-    doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
-}
-
-// Генерация третьей страницы
-async function generatePage3(doc, formData) {
-    const {
-        salonName,
-        tacticsTitle,
-        tactics,
-        treatmentPlanTitle,
-        treatmentPlan,
-        treatmentDurationTitle,
-        treatmentDuration,
-        footerText
-    } = formData;
-
-    doc.addPage();
-
-    // Устанавливаем цвет фона страницы
-    doc.setFillColor(backgroundColor);
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F"); // Заливаем фон
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F");
 
     // Устанавливаем цвет текста
     doc.setTextColor(textColor);
 
     // Координаты и размеры изображения
-    const imageUrl = "https://static.wixstatic.com/media/78e720_8d2b3ddffa5b432497cee0b152aab3f5~mv2.png"; // 30% opacity
+    const imageUrl = "https://static.wixstatic.com/media/78e720_8d2b3ddffa5b432497cee0b152aab3f5~mv2.png";
     const imageWidth = 150;
     const imageHeight = 150;
     const imageX = (doc.internal.pageSize.getWidth() - imageWidth) / 2;
@@ -353,10 +288,12 @@ async function generatePage3(doc, formData) {
         }));
 
     const compressedBase64 = await compressImage(imageBase64);
+    doc.addImage(compressedBase64, "PNG", imageX, imageY, imageWidth, imageHeight);
 
-    // Добавляем изображение
-    doc.addImage(compressedBase64, "JPEG", imageX, imageY, imageWidth, imageHeight);
-
+    // Единая ширина для текста
+    const maxW = doc.internal.pageSize.getWidth() - 40;
+    const sectionGap = 11; // Вертикальный отступ между секциями (+3мм)
+    const titleToTextGap = 8; // Отступ между заголовком секции и текстом (+2мм)
 
     // Хеддер
     doc.setFont("Montserrat-Regular");
@@ -366,50 +303,346 @@ async function generatePage3(doc, formData) {
     let currentX = 20;
     let currentY = 35;
 
-    // Тактика підходу
+    // Заголовок страницы (фиксированный)
     doc.setFont("Montserrat-Bold");
     doc.setFontSize(18);
+    doc.text("Що відбувається з твоєю шкірою?", doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
+    currentY += 14;
+    // Секция 1: Основной текст (БЕЗ подзаголовка — он уже в главном заголовке страницы)
+    if (theoryWhat && theoryWhat.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13); 
+        doc.text(theoryWhat, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(theoryWhat, {maxWidth: maxW}).h + sectionGap;
+    }
 
-    // Рассчитываем высоту блока текста
-    const tacticsHeight = doc.getTextDimensions(tacticsTitle + " " + tactics, {maxWidth: doc.internal.pageSize.getWidth() - 40}).h;
-    // Рисуем текст этого блока
-    doc.text(tacticsTitle + " " + tactics, currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
+    // Секция 2: Тригери
+    if (theoryTriggers && theoryTriggers.trim()) {
+        doc.setFont("Montserrat-Bold");
+        doc.setFontSize(13);
+        doc.text("Тригери, які впливають на стан шкіри:", currentX, currentY);
+        currentY += titleToTextGap;
 
-    currentY += tacticsHeight + 10;
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(theoryTriggers, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(theoryTriggers, {maxWidth: maxW}).h + sectionGap;
+    }
 
-    // З чого починається шлях до чистої шкіри
-    doc.setFont("Montserrat-Bold");
-    doc.setFontSize(14);
-    doc.text(treatmentPlanTitle, currentX, currentY);
-    doc.setFont("Montserrat-Regular");
-    doc.setFontSize(14);
-    currentY += 10;
-    // Рассчитываем высоту блока текста
-    const treatmentPlanHeight = doc.getTextDimensions(treatmentPlan, {maxWidth: doc.internal.pageSize.getWidth() - 40}).h;
-    // Рисуем текст этого блока
-    doc.text(treatmentPlan, currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
+    // Секция 3: Тактика
+    if (theoryTactics && theoryTactics.trim()) {
+        doc.setFont("Montserrat-Bold");
+        doc.setFontSize(13);
+        doc.text("Тактика підходу до шкіри:", currentX, currentY);
+        currentY += titleToTextGap;
 
-    currentY += treatmentPlanHeight + 10;
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(theoryTactics, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(theoryTactics, {maxWidth: maxW}).h + sectionGap;
+    }
 
-    // Орієнтовна тривалість лікування
-    doc.setFont("Montserrat-Bold");
-    doc.setFontSize(14);
-    doc.text(treatmentDurationTitle, currentX, currentY);
-    doc.setFont("Montserrat-Regular");
-    doc.setFontSize(14);
-    currentY += 10;
+    // Секция 4: Тривалість лікування
+    if (theoryDuration && theoryDuration.trim()) {
+        doc.setFont("Montserrat-Bold");
+        doc.setFontSize(13);
+        doc.text("Тривалість лікування:", currentX, currentY);
+        currentY += titleToTextGap;
 
-    // Рассчитываем высоту блока текста
-    const treatmentDurationHeight = doc.getTextDimensions(treatmentDuration, {maxWidth: doc.internal.pageSize.getWidth() - 40}).h;
-    // Рисуем текст этого блока
-    doc.text(treatmentDuration, currentX, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(theoryDuration, currentX, currentY, {maxWidth: maxW});
+    }
 
     // Футер
-    doc.setDrawColor(lineColor); // Устанавливаем цвет #9F7662 коричневый
+    doc.setDrawColor(lineColor);
     doc.line(20, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 20);
     doc.setFont("Montserrat-Italic");
     doc.setFontSize(12);
     doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
+}
+
+// Генерация третьей страницы
+// Генерация страницы 3 — "Шлях до чистої та здорової шкіри"
+async function generatePage3(doc, formData) {
+    const {
+        salonName,
+        planIntroText,
+        planHomeCareIntroText,
+        planHomeCareText,
+        planProceduresText,
+        planTherapyText,
+        footerText
+    } = formData;
+
+    doc.addPage();
+
+    // Устанавливаем цвет фона страницы
+    doc.setFillColor(backgroundColor);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F");
+
+    // Устанавливаем цвет текста
+    doc.setTextColor(textColor);
+
+    // Фоновое изображение
+    const imageUrl = "https://static.wixstatic.com/media/78e720_8d2b3ddffa5b432497cee0b152aab3f5~mv2.png";
+    const imageWidth = 150;
+    const imageHeight = 150;
+    const imageX = (doc.internal.pageSize.getWidth() - imageWidth) / 2;
+    const imageY = (doc.internal.pageSize.getHeight() - imageHeight) - 10;
+
+    const imageBase64 = await fetch(imageUrl)
+        .then(response => response.blob())
+        .then(blob => new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        }));
+
+    const compressedBase64 = await compressImage(imageBase64);
+    doc.addImage(compressedBase64, "PNG", imageX, imageY, imageWidth, imageHeight);
+
+    // Единая ширина для текста
+    const maxW = doc.internal.pageSize.getWidth() - 40;
+    const sectionGap = 11; // Вертикальный отступ между секциями (как на стр. 2)
+    const titleToTextGap = 8; // Отступ между заголовком секции и текстом (как на стр. 2)
+
+    // Хеддер
+    doc.setFont("Montserrat-Regular");
+    doc.setFontSize(15);
+    doc.text(salonName, doc.internal.pageSize.getWidth() / 2, 20, {align: "center"});
+
+    let currentX = 20;
+    let currentY = 35;
+
+    // Главный заголовок страницы (статический)
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(18);
+    doc.text("Як буде виглядати шлях до чистої та здорової шкіри?", doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
+    currentY += 14;
+
+    // === Вступний текст (без підзаголовка, одразу після заголовка сторінки) ===
+    if (planIntroText && planIntroText.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(planIntroText, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(planIntroText, {maxWidth: maxW}).h + sectionGap;
+    }
+
+    // === Секция 1: Домашній догляд (текст из формы) ===
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("Домашній догляд", currentX, currentY);
+    currentY += titleToTextGap;
+
+    if (planHomeCareIntroText && planHomeCareIntroText.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(planHomeCareIntroText, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(planHomeCareIntroText, {maxWidth: maxW}).h + sectionGap;
+    }
+
+    // === Секция 2: Яким буде твій догляд? (текст из формы) ===
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("Яким буде твій догляд?", currentX, currentY);
+    currentY += titleToTextGap;
+
+    if (planHomeCareText && planHomeCareText.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(planHomeCareText, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(planHomeCareText, {maxWidth: maxW}).h + sectionGap;
+    }
+
+    // === Секция 3: Процедури, які посилять результат (текст из формы) ===
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("Процедури, які посилять результат", currentX, currentY);
+    currentY += titleToTextGap;
+
+    if (planProceduresText && planProceduresText.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(planProceduresText, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(planProceduresText, {maxWidth: maxW}).h + sectionGap;
+    }
+
+    // === Секция 4: План терапії та повторна консультація (текст из формы) ===
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("План терапії та повторна консультація", currentX, currentY);
+    currentY += titleToTextGap;
+
+    if (planTherapyText && planTherapyText.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(planTherapyText, currentX, currentY, {maxWidth: maxW});
+    }
+
+    // Футер
+    doc.setDrawColor(lineColor);
+    doc.line(20, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 20);
+    doc.setFont("Montserrat-Italic");
+    doc.setFontSize(12);
+    doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
+}
+
+// Генерация опціональної сторінки «Актив»
+async function generateActivePage(doc, formData) {
+    const {salonName, activeBlock1, activeBlock2, activeBlock3, footerText} = formData;
+
+    doc.addPage();
+
+    doc.setFillColor(backgroundColor);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F");
+
+    // Напівпрозоре фонове зображення (внизу по центру)
+    const pwActive = doc.internal.pageSize.getWidth(), phActive = doc.internal.pageSize.getHeight();
+    const decoActiveW = 150, decoActiveH = 150;
+    const decoActive = await loadDecorationBase64(backgroundDecorationUrl);
+    doc.addImage(decoActive, "PNG", (pwActive - decoActiveW) / 2, phActive - decoActiveH - 10, decoActiveW, decoActiveH);
+
+    doc.setTextColor(textColor);
+
+    const maxW = doc.internal.pageSize.getWidth() - 40;
+    const sectionGap = 11;   // як на стор. 2 та 3
+    const titleToTextGap = 8; // відступ між підзаголовком і текстом
+
+    doc.setFont("Montserrat-Regular");
+    doc.setFontSize(15);
+    doc.text(salonName, doc.internal.pageSize.getWidth() / 2, 20, {align: "center"});
+
+    let currentX = 20;
+    let currentY = 35;
+
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(18);
+    doc.text("Актив", doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
+    currentY += 14;
+
+    // Секція 1: Декілька деталей про запропонований актив
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("Декілька деталей про запропонований актив", currentX, currentY);
+    currentY += titleToTextGap;
+    if (activeBlock1 && activeBlock1.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(activeBlock1, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(activeBlock1, {maxWidth: maxW}).h + sectionGap;
+    }
+
+    // Секція 2: Правила використання
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("Правила використання", currentX, currentY);
+    currentY += titleToTextGap;
+    if (activeBlock2 && activeBlock2.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(activeBlock2, currentX, currentY, {maxWidth: maxW});
+        currentY += doc.getTextDimensions(activeBlock2, {maxWidth: maxW}).h + sectionGap;
+    }
+
+    // Секція 3: Можливі реакції
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(13);
+    doc.text("Можливі реакції", currentX, currentY);
+    currentY += titleToTextGap;
+    if (activeBlock3 && activeBlock3.trim()) {
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(13);
+        doc.text(activeBlock3, currentX, currentY, {maxWidth: maxW});
+    }
+
+    doc.setDrawColor(lineColor);
+    doc.line(20, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 20);
+    doc.setFont("Montserrat-Italic");
+    doc.setFontSize(12);
+    doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
+}
+
+// Компактна верстка для сторінок тригерів: 1 тема = 1 сторінка (з safety net — перенос при переповненні)
+function drawTriggerPageHeader(doc, salonName, decorationBase64) {
+    doc.setFillColor(backgroundColor);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F");
+    if (decorationBase64) {
+        const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+        const w = 150, h = 150;
+        doc.addImage(decorationBase64, "PNG", (pw - w) / 2, ph - h - 10, w, h);
+    }
+    doc.setTextColor(textColor);
+    doc.setFont("Montserrat-Regular");
+    doc.setFontSize(15);
+    doc.text(salonName, doc.internal.pageSize.getWidth() / 2, 20, {align: "center"});
+}
+
+function drawTriggerPageFooter(doc, footerText) {
+    doc.setDrawColor(lineColor);
+    doc.line(20, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 20);
+    doc.setFont("Montserrat-Italic");
+    doc.setFontSize(12);
+    doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
+}
+
+function generateTriggerPage(doc, triggerPage, formData) {
+    const {salonName, footerText} = formData;
+    const {pageTitle, sections} = triggerPage;
+    const maxW = doc.internal.pageSize.getWidth() - 40;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const maxY = pageHeight - 25;
+    // Стиль як на стор. 2 та 3: більший шрифт, більші відступи
+    const sectionGap = 11;
+    const titleToTextGap = 8;
+    const bodyFontSize = 13;
+    const titleFontSize = 13;
+    const lineHeight = 6;
+
+    doc.addPage();
+    drawTriggerPageHeader(doc, salonName);
+    let currentX = 20;
+    let currentY = 35;
+
+    doc.setFont("Montserrat-Bold");
+    doc.setFontSize(18);
+    doc.text(pageTitle, doc.internal.pageSize.getWidth() / 2, currentY, {align: "center", maxWidth: maxW});
+    currentY += doc.getTextDimensions(pageTitle, {maxWidth: maxW}).h + 14;
+
+    for (let i = 0; i < sections.length; i++) {
+        const {title, body} = sections[i];
+        if (!body || !body.trim()) continue;
+
+        if (title && title.trim()) {
+            if (currentY + 8 > maxY) {
+                drawTriggerPageFooter(doc, footerText);
+                doc.addPage();
+                drawTriggerPageHeader(doc, salonName, decorationBase64);
+                currentY = 35;
+            }
+            doc.setFont("Montserrat-Bold");
+            doc.setFontSize(titleFontSize);
+            doc.text(title, currentX, currentY, {maxWidth: maxW});
+            currentY += titleToTextGap;
+        }
+
+        doc.setFont("Montserrat-Regular");
+        doc.setFontSize(bodyFontSize);
+        const lines = doc.splitTextToSize(body, maxW);
+        for (let L = 0; L < lines.length; L++) {
+            if (currentY + lineHeight > maxY) {
+                drawTriggerPageFooter(doc, footerText);
+                doc.addPage();
+                drawTriggerPageHeader(doc, salonName);
+                currentY = 35;
+            }
+            doc.text(lines[L], currentX, currentY);
+            currentY += lineHeight;
+        }
+        currentY += sectionGap;
+    }
+
+    drawTriggerPageFooter(doc, footerText);
 }
 
 // Генерация страницы с препаратами для ухода
@@ -507,7 +740,7 @@ async function generateProductsPage(doc, product, index) {
 
             const compressedBase64 = await compressImage(img);
 
-            doc.addImage(compressedBase64, "JPEG", x + productPadding, y, 50, 80);
+            doc.addImage(compressedBase64, "PNG", x + productPadding, y, 50, 80);
         }
 
         // Название
@@ -627,14 +860,14 @@ async function generateProductsApplyingInstructionPage(doc) {
 
     const compressedBase64 = await compressImage(imageBase64);
 
-    doc.addImage(compressedBase64, "JPEG", imageX, currentY, imageWidth, imageHeight);
+    doc.addImage(compressedBase64, "PNG", imageX, currentY, imageWidth, imageHeight);
 
     currentY += imageHeight + 8;
 
     // Подпись под изображением
     doc.setFont("Montserrat-Regular");
     doc.setFontSize(12);
-    doc.text("масажні лінії", doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
+    doc.text("Масажні лінії", doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
 
     // Футтер
     doc.setDrawColor(lineColor);
@@ -721,7 +954,7 @@ async function generateProcedureRecommendationsPage(doc, formData) {
     const compressedBase64 = await compressImage(imageBase64);
 
     // Добавляем изображение
-    doc.addImage(compressedBase64, "JPEG", imageX, imageY, imageWidth, imageHeight);
+    doc.addImage(compressedBase64, "PNG", imageX, imageY, imageWidth, imageHeight);
 
     // Футтер
     doc.setDrawColor(lineColor);
@@ -763,7 +996,7 @@ async function generateNutritionRecommendationsPage(doc, formData) {
     const compressedBase64 = await compressImage(imageBase64);
 
     // Добавляем изображение
-    doc.addImage(compressedBase64, "JPEG", imageX, imageY, imageWidth, imageHeight);
+    doc.addImage(compressedBase64, "PNG", imageX, imageY, imageWidth, imageHeight);
 
     // Устанавливаем цвет текста
     doc.setTextColor(textColor);
@@ -787,24 +1020,24 @@ async function generateNutritionRecommendationsPage(doc, formData) {
     // Абзац 1
     doc.setFont("Montserrat-Regular");
     doc.setFontSize(12);
-    const paragraph1 = "Не існує єдиної думки, яка б дала чітку, гарантовану відповідь на питання як впливає їжа на стан шкіри, все дуже індивідуально та залежить від багатьох факторів, але, є певні доказові моменти, які допоможуть підтримати шкіру та організм в цілому:";
+    const paragraph1 = "Не існує єдиної думки, яка б дала чітку, гарантовану відповідь на питання як впливає їжа на стан шкіри, все дуже індивідуально та залежить від багатьох факторів, але є певні доказові моменти, які допоможуть підтримати шкіру та організм вцілому:";
     doc.text(paragraph1, 20, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
 
     currentY += doc.getTextDimensions(paragraph1).h + 15;
 
     // Абзац 2 (список)
     const paragraph2 = `
-- Має бути 2-3 повноцінних прийому їжі, бажано в один і той же час;
+- має бути 2-3 повноцінних прийому їжі, бажано в один і той же час;
 
-- Молочні та кисломолочні продукти - обмежити (дозволяється до 3-х чашок кави на звичайному молоці на день);
+- молочні та кисломолочні продукти - обмежити (дозволяється до 3-х чашок кави на звичайному молоці на день);
 
-- Промислові солодощі та глютен - мінімізуємо (дозволяється після основного прийому їжі);
+- промислові солодощі та глютен - мінімізуємо (дозволяється після основного прийому їжі);
 
-- Обмежуй вживання: соуси, консерви, фастфуд, їжу з кірочками (більше тушіння замість жарки);
+- обмежуй вживання: соуси, консерви, фастфуд, їжу з кірочками (більше тушіння замість жарки);
 
-- Намагайся дотримуватися правила: 40% свіжі сирі овочі на тарілці;
+- намагайся дотримуватися правила: 40% свіжі сирі овочі на тарілці;
 
-- Вживати достатню кількість води - 1,2/2 літри.`;
+- вживати достатню кількість води - 1,2/2 літри.`;
 
     doc.text(paragraph2, 20, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
 
@@ -820,11 +1053,11 @@ async function generateNutritionRecommendationsPage(doc, formData) {
 
     // Абзац 3 (список)
     const paragraph3 = `
-- Квашена капуста (без цукру) - покращує мікробом шкіри, додавати до раціону 2-3 рази на тиждень;
+- квашена капуста (без цукру) - покращує мікробом шкіри, додавати до раціону 2-3 рази на тиждень;
 
-- Лактоза - не впливає на шкіру, але фермент лактоза - може (цей фермент є і в безлактозному молоці) якщо помічаєш вплив молока на шкіру - прибирай повністю;
+- лактоза - не впливає на шкіру, але фермент лактоза - може (цей фермент є і в безлактозному молоці) якщо помічаєш вплив молока на шкіру - прибирай повністю;
 
-- Банани та виноград мають високий глікемічний індекс тому, бажано ці продукти мінімізувати.`;
+- банани та виноград мають високий глікемічний індекс тому, бажано ці продукти мінімізувати.`;
 
     doc.setFont("Montserrat-Regular");
     doc.setFontSize(12);
@@ -877,19 +1110,19 @@ async function generateHabitsRecommendationsPage(doc) {
 
 
     // Второй абзац (список)
-    const habitsList = `- Постільна білизна - змінювати раз на тиждень, наволочка - змінювати кожні 3-4 дні;
+    const habitsList = `- постільна білизна - змінювати раз на тиждень, наволочка - змінювати кожні 3-4 дні;
 
-- Якісно очищай шкіру після макіяжу - не спати з декоративною косметикою;
+- якісно очищай шкіру після макіяжу - не спати з декоративною косметикою;
 
-- Дотримуйся 6-8 год. сну;
+- дотримуйся 6-8 год. сну;
 
-- Не дави та не здирай висипи - це може привезти до пост акне плям та рубців;
+- не дави та не здирай висипи - це може призвести до пост акне плям та рубців;
 
-- Тяжко в наших реаліях не стресувати, але стрес ключовий фактор до висипів. Старайся досліджувати себе та знаходити методи, які заспокоюють;
+- тяжко в наших реаліях не стресувати, але стрес ключовий фактор до висипів. Старайся досліджувати себе та знаходити методи, які заспокоюють;
 
-- Спорт - силові тренування призводять до підвищення тестостерону, який згодом може погіршувати стан шкіри, обирай для себе легкий вид спорту: йога, пілатес;
+- спорт - силові тренування призводять до підвищення тестостерону, який згодом може погіршувати стан шкіри, обирай для себе легкий вид спорту: йога, пілатес;
 
-- Якщо немає потреби, раз на рік проходь огляд у гінеколога з діагностикою УЗД - жіноче здоров´я - головне.`;
+- якщо немає потреби, раз на рік проходь огляд у гінеколога з діагностикою УЗД - жіноче здоров'я - головне.`;
     doc.setFont("Montserrat-Regular");
     doc.setFontSize(14);
 
@@ -913,7 +1146,7 @@ async function generateHabitsRecommendationsPage(doc) {
 
     const compressedBase64 = await compressImage(imageBase64);
 
-    doc.addImage(compressedBase64, "JPEG", imageX, imageY, imageWidth, imageHeight);
+    doc.addImage(compressedBase64, "PNG", imageX, imageY, imageWidth, imageHeight);
 
     // Футтер
     doc.setDrawColor(lineColor);
@@ -984,7 +1217,7 @@ async function generateBotPage(doc) {
 
         const compressedBase64 = await compressImage(base64);
 
-        doc.addImage(compressedBase64, "JPEG", imgStartX + i * (imgWidth + spacing), currentY, imgWidth, imgHeight);
+        doc.addImage(compressedBase64, "PNG", imgStartX + i * (imgWidth + spacing), currentY, imgWidth, imgHeight);
     }
 
     currentY += imgHeight + 15;
@@ -1079,77 +1312,59 @@ async function generateBotPage(doc) {
     doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, {align: "center"});
 }
 
-// Генерация финальной страницы
+// Генерация финальной страницы (завжди додається, без полів у формі; динамічно лише clientName)
 async function generateFinalPage(doc, formData) {
-    const {
-        salonName,
-        clientName,
-        footerText
-    } = formData;
+    const {salonName, clientName, footerText} = formData;
 
     doc.addPage();
 
-    // Устанавливаем цвет фона
     doc.setFillColor(backgroundColor);
     doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F");
 
-    // Устанавливаем цвет текста
+    // Зображення-сердечко по центру сторінки (по горизонталі та вертикалі)
+    const finalPageImageUrl = "https://static.wixstatic.com/media/78e720_6d45e2243d1f40c7be635c7b463fe672~mv2.png";
+    const pwFinal = doc.internal.pageSize.getWidth(), phFinal = doc.internal.pageSize.getHeight();
+    const decoFinalW = 75, decoFinalH = 75;
+    const decoFinalX = (pwFinal - decoFinalW) / 2;
+    const decoFinalY = (phFinal - decoFinalH) / 2;
+    const decoFinalRaw = await loadDecorationBase64(finalPageImageUrl);
+    const decoFinal = await applyImageOpacity(decoFinalRaw, 0.4);
+    doc.addImage(decoFinal, "PNG", decoFinalX, decoFinalY, decoFinalW, decoFinalH);
+
     doc.setTextColor(textColor);
 
+    const maxW = doc.internal.pageSize.getWidth() - 40;
+    const currentX = 20;
     let currentY = 20;
 
-    // Хеддер
+    // Хеддер (відступ як на інших сторінках — 15)
     doc.setFont("Montserrat-Regular");
     doc.setFontSize(15);
     doc.text(salonName, doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
 
-    currentY += 30;
-
-    // Основной заголовок
-    doc.setFont("Montserrat-Bold");
-    doc.setFontSize(20);
-    doc.text("Твій шлях до чистої шкіри", doc.internal.pageSize.getWidth() / 2, currentY, {align: "center"});
-
     currentY += 15;
 
-    // Текст благодарности
-    const thankYouText = `Дякую, що довірила мені свою шкіру, ${clientName}.
-
-Памʼятай, що результат - це синергія наших спільних дій:
-- регулярного домашнього догляду;
-- дотримання рекомендацій по способу життя та харчуванню;
-- своєчасних косметологічних процедур.`;
-    doc.setFont("Montserrat-Regular");
-    doc.setFontSize(12);
-    doc.text(thankYouText, 20, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
-
-    currentY += doc.getTextDimensions(thankYouText).h + 15;
-
-    // Блок з нагадуваннями
-    const reminderTitle = "Памʼятай:";
-    const reminders = `
-- будь ласка, не займайся самолікуванням — це може тільки погіршити стан шкіри;
-- не порівнюй свій шлях з іншими, кожен випадок унікальний;
-- результат потребує часу, але разом ми його обовʼязково досягнемо.`;
+    // Перший рядок жирним: "Офіційно дозволено тобі, {clientName}:"
+    const firstLine = `Офіційно дозволено тобі, ${clientName}:`;
     doc.setFont("Montserrat-Bold");
-    doc.setFontSize(14);
-    doc.text(reminderTitle, 20, currentY);
+    doc.setFontSize(13);
+    doc.text(firstLine, currentX, currentY, {maxWidth: maxW});
+    currentY += doc.getTextDimensions(firstLine, {maxWidth: maxW}).h + 8;
 
-    currentY += 8;
-
+    // Список regular
+    const listText = `- робити перший крок назустріч своїй шкірі без страху і сумнівів;
+- дбати про себе щодня, навіть маленькими звичками;
+- насолоджуватися процесом змін і помічати кожен прогрес.`;
     doc.setFont("Montserrat-Regular");
-    doc.setFontSize(12);
-    doc.text(reminders, 20, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
+    doc.setFontSize(13);
+    doc.text(listText, currentX, currentY, {maxWidth: maxW});
+    currentY += doc.getTextDimensions(listText, {maxWidth: maxW}).h + 14;
 
-    currentY += doc.getTextDimensions(reminders).h + 15;
+    // Пам'ятай
+    const rememberText = "Пам'ятай: цей шлях - про турботу і любов до себе, а правильний догляд стане твоїм надійним помічником.";
+    doc.text(rememberText, currentX, currentY, {maxWidth: maxW});
 
-    // Фінальне повідомлення
-    const finalMessage = "Я завжди поруч, щоб підтримати тебе на цьому шляху. \nЗ турботою про твою шкіру, \nтвій косметолог.";
-    doc.setFont("Montserrat-Italic");
-    doc.setFontSize(12);
-    doc.text(finalMessage, 20, currentY, {maxWidth: doc.internal.pageSize.getWidth() - 40});
-
-    // Футтер
+    // Футер
     doc.setDrawColor(lineColor);
     doc.line(20, doc.internal.pageSize.getHeight() - 20, doc.internal.pageSize.getWidth() - 20, doc.internal.pageSize.getHeight() - 20);
     doc.setFont("Montserrat-Italic");
@@ -1176,17 +1391,39 @@ async function downloadPDF() {
 
         // Генерация страниц
         await generatePage1(doc, formData);
-        await generatePage2(doc, formData);
+        if (formData.includeTheoryPage) {
+            await generatePage2(doc, formData);
+        }
         await generatePage3(doc, formData);
 
         for (let i = 0; i < formData.products.length; i++) {
             await generateProductsPage(doc, formData.products[i], i);
         }
 
-        await generateProductsApplyingInstructionPage(doc);
-        await generateProcedureRecommendationsPage(doc, formData);
-        await generateNutritionRecommendationsPage(doc, formData);
-        await generateHabitsRecommendationsPage(doc, formData);
+        if (formData.includeActivePage) {
+            await generateActivePage(doc, formData);
+        }
+
+        const triggerIncludeKeys = {
+            stress: "includeTriggerStress",
+            pcos: "includeTriggerPCOS",
+            menstruation: "includeTriggerMenstruation",
+            food: "includeTriggerFood",
+            genetics: "includeTriggerGenetics"
+        };
+        const triggerPagesList = window.TRIGGER_PAGES || [];
+        for (let t = 0; t < triggerPagesList.length; t++) {
+            const tp = triggerPagesList[t];
+            if (formData[triggerIncludeKeys[tp.key]]) {
+                await generateTriggerPage(doc, tp, formData);
+            }
+        }
+
+        // Тимчасово вимкнено (не видаляти):
+        // await generateProductsApplyingInstructionPage(doc);
+        // await generateProcedureRecommendationsPage(doc, formData);
+        // await generateNutritionRecommendationsPage(doc, formData);
+        // await generateHabitsRecommendationsPage(doc, formData);
         await generateBotPage(doc)
 
         await generateFinalPage(doc, formData);

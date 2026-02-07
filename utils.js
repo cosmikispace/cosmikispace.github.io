@@ -25,7 +25,26 @@ async function loadImage(url) {
         );
 }
 
-// Help to compress images before pasting them into pdf file
+// Застосувати прозорість до зображення (base64 → base64 з «запеклою» прозорістю для PDF)
+async function applyImageOpacity(base64, opacity) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64;
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = Math.max(0, Math.min(1, opacity));
+            ctx.drawImage(img, 0, 0);
+            ctx.globalAlpha = 1;
+            resolve(canvas.toDataURL("image/png"));
+        };
+    });
+}
+
+// Resize images before pasting them into pdf file (PNG to preserve transparency)
 async function compressImage(base64, quality = 0.6, maxWidth = 800) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -33,18 +52,17 @@ async function compressImage(base64, quality = 0.6, maxWidth = 800) {
         img.onload = () => {
             const canvas = document.createElement("canvas");
             const scale = Math.min(1, maxWidth / img.width);
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
 
             const ctx = canvas.getContext("2d");
 
-            // Set background before drawing the image
-            ctx.fillStyle = "#F5E9E3";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Clear canvas to preserve transparency (no background fill)
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const compressedBase64 = canvas.toDataURL("image/jpeg", quality);
-            resolve(compressedBase64);
+            const resizedBase64 = canvas.toDataURL("image/png");
+            resolve(resizedBase64);
         };
     });
 }
